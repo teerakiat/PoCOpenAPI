@@ -22,6 +22,7 @@ import org.springframework.web.client.RestTemplate;
 
 import th.co.itmx.config.AppConfig;
 import th.co.itmx.util.HttpUtil;
+import th.co.itmx.util.SignatureAuthen;
 
 /**
  * Handles requests for the application home page.
@@ -39,21 +40,59 @@ public class VerifySlipController {
 	public ResponseEntity<String> Switch(
 			@PathVariable String bankId, 
 			@RequestBody(required=false) String content,  
-			HttpServletRequest request) {
+			HttpServletRequest request) throws Exception {
 		
-		String pathInfo = "/itmx/bank/verifyslip/"+HttpUtil.getWildcardPath(request);
+		String pathInfo = "/bank/verifyslip/"+HttpUtil.getWildcardPath(request);
 		
 		HttpMethod httpMethod = HttpMethod.resolve(request.getMethod());
 		String bankUrl = appConfig.getUrls().get(bankId) + pathInfo;
 		logger.info("calling to "+bankUrl);
 		
+		//verify source bank signature
+		String signatureStr = request.getHeader("signature");
+		try {
+			if(!SignatureAuthen.verify(bankId, signatureStr, content)) {
+				return new ResponseEntity<String>("", HttpStatus.INTERNAL_SERVER_ERROR);
+			}
+		} catch (Exception e) {
+			return new ResponseEntity<String>("", HttpStatus.UNAUTHORIZED);
+		}
+		
 		RestTemplate restTemplate = new RestTemplate();
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
+		
+		//sign with itmx signature
+		try {
+			String itmxSignature = SignatureAuthen.sign("itmx", content);
+			headers.set("signature", itmxSignature);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return new ResponseEntity<String>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+		
 		HttpEntity<String> targetRequest = new HttpEntity<String>(content, headers);
 		
 		ResponseEntity<String> response = restTemplate.exchange(bankUrl, httpMethod, targetRequest,  String.class);
-		return new ResponseEntity<String>(response.getBody(), HttpStatus.OK);
+		
+		//verify response signature
+		signatureStr = response.getHeaders().get(SignatureAuthen.signatureHeaderName).get(0);
+		String responseBody = response.getBody();
+		
+		try {
+			if(!SignatureAuthen.verify(bankId, signatureStr, responseBody)) {
+//				logger.info(signatureStr);
+				return new ResponseEntity<String>("", HttpStatus.UNAUTHORIZED);
+			}
+		} catch (Exception e) {
+			return new ResponseEntity<String>("", HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+		
+		HttpHeaders ResponseHeaders = new HttpHeaders();
+		ResponseHeaders.add(SignatureAuthen.signatureHeaderName, SignatureAuthen.sign("itmx", responseBody));
+		
+		return new ResponseEntity<String>(response.getBody(), ResponseHeaders, HttpStatus.OK);
 			
 		//GET URL
 //			ResponseEntity<String> response = restTemplate.getForEntity("https://gturnquist-quoters.cfapps.io/api/random", 

@@ -56,13 +56,14 @@ public class SignatureController {
 	}
 
 	@RequestMapping(value = "/{bankId}/verify", method = RequestMethod.POST, produces = { "application/json" })
-	public ResponseEntity<String> verify(@RequestBody(required = false) String content, HttpServletRequest request) {
+	public ResponseEntity<String> verify(@RequestBody(required = false) String content,
+			HttpServletRequest request, @PathVariable String bankId) {
 		try {
 			String signatureStr = request.getHeader("Signature");
 			logger.info("verify content: "+content);
 			logger.info("verify signature: "+signatureStr);
 			
-			if(SignatureAuthen.verify(signatureStr, content)) {
+			if(SignatureAuthen.verify(bankId, signatureStr, content)) {
 				return new ResponseEntity<String>("", HttpStatus.OK);
 			}else {
 				return new ResponseEntity<String>("", HttpStatus.UNAUTHORIZED);

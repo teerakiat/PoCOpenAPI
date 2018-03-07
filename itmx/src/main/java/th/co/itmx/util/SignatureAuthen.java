@@ -21,6 +21,8 @@ import org.springframework.http.ResponseEntity;
 
 public class SignatureAuthen {
 
+	public final static String signatureHeaderName = "signature";
+	
 	static String itmxKey = "MIIJQQIBADANBgkqhkiG9w0BAQEFAASCCSswggknAgEAAoICAQC0JzKvB9KjAUVC"
 			+ "NOstwkxbI98eUOvlLALa+62xbn7Iha+CoY886PW012C32o6XTm+8ApQQ1N+FEv9Q"
 			+ "SrH0TGDcVN+T8Bz7Qm2zDtpuVKSVzFKq4hPoQlFf2JRiI9wYB9ZWexi5OiBAFwSz"
@@ -71,6 +73,19 @@ public class SignatureAuthen {
 			+ "t/F9fD48ZHTqk78Cxu4d/z/GoIejwFdHSSAuzIHRLRIbNgvJGvnSwAtjJQdZr97k"
 			+ "6GR2K65AKg8w9EufG/EGxI6t3xBQI/0vg1la//X+A8mxYwOhnka1pbNuH2Z3qY1a" + "PSkg0Oq0NR1Ei9YhDLl7d0K/Kohy";
 
+	static String itmxCertificate = "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAtCcyrwfSowFFQjTrLcJM" + 
+			"WyPfHlDr5SwC2vutsW5+yIWvgqGPPOj1tNdgt9qOl05vvAKUENTfhRL/UEqx9Exg" + 
+			"3FTfk/Ac+0Jtsw7ablSklcxSquIT6EJRX9iUYiPcGAfWVnsYuTogQBcEs6ZZ1VJX" + 
+			"XZnyN+OsLCAu2XFCnt1p7OG+hrLgrSSUs7jk3h/Xn0b5gcz3SK8hzHUSEVFpuFtb" + 
+			"qRYH/VhWiTnW/hIza/dZfQv/3/QqGB0zRMrzvEYwgL1fmLdQgjHXq/EFf/+JcQzT" + 
+			"6tE0P/rNVYQ0fVQdQRqVxxcF2/44/xRR6VVI/LjNccOhZVlO3eKojOu8Njm1Ii79" + 
+			"xWnkX/Nrmqdq5EoF1MWVY0sZY7/lK2pUqZMqIA1QFQcyt48rZFEMBJLDkIlA+/fO" + 
+			"q8RRNppESsV/k4rK76rI5/1E4bYNTpjk7vTkjHc7mwr/vFQCZ5uYxcv/Ay3x0Igu" + 
+			"GYzx0J2ipOusQDGUSkz2LqnDBqZa/JobogRaNaIZj2Jszc1Yqlhshs3PMqOfTo2o" + 
+			"vTt/KzxGUjjtDVzRvkBdGEfYz5QhT4oQWt8M/VEtgbhdvjfwS9H1TWDgfnNhfsC8" + 
+			"rLTtx8RaxecMH38SYohhL2ls6sAy8QRfRPVCtxBp+7Mz3CKBq3iRY3noYQ21ScG5" + 
+			"R50qFFG/nvy1J4odF0ck1G0CAwEAAQ==";
+	
 	static String bankCertificate = "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEArouICxhSv/I1sUxgH/Uv"
 			+ "YOZ16Bp8t/uzjloRGbgN32vWNVS6yQpVHzDnZ+nrHclJMAhzZz7q9xioMpuBTC1t"
 			+ "Ya5S24VzB0yD7GIAzHmJbqlrC6Gy79nfBU9xlOs2JnHrmdsNYiV3vu6xQ5hmZxl9"
@@ -148,8 +163,15 @@ public class SignatureAuthen {
 	}
 
 	/// Verify signature
-	public static boolean verify(String signatureStr, String content) throws Exception{
-		X509EncodedKeySpec pubSpec = new X509EncodedKeySpec(Base64.getDecoder().decode(bankCertificate));
+	public static boolean verify(String ownerId, String signatureStr, String content) throws Exception{
+		String certificate;
+		
+		if (ownerId.equalsIgnoreCase("itmx")) {
+			certificate = itmxCertificate;
+		} else {
+			certificate = bankCertificate;
+		}
+		X509EncodedKeySpec pubSpec = new X509EncodedKeySpec(Base64.getDecoder().decode(certificate));
 		KeyFactory kf = KeyFactory.getInstance("RSA");
 		PublicKey pub = kf.generatePublic(pubSpec);
 
