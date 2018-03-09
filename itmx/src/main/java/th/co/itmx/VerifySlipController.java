@@ -46,16 +46,15 @@ public class VerifySlipController {
 		
 		HttpMethod httpMethod = HttpMethod.resolve(request.getMethod());
 		String bankUrl = appConfig.getUrls().get(bankId) + pathInfo;
-		logger.info("calling to "+bankUrl);
 		
 		//verify source bank signature
-		String signatureStr = request.getHeader("signature");
+		String signatureStr = request.getHeader(SignatureAuthen.signatureHeaderName);
 		try {
 			if(!SignatureAuthen.verify(bankId, signatureStr, content)) {
-				return new ResponseEntity<String>("", HttpStatus.INTERNAL_SERVER_ERROR);
+				return new ResponseEntity<String>("", HttpStatus.UNAUTHORIZED);
 			}
 		} catch (Exception e) {
-			return new ResponseEntity<String>("", HttpStatus.UNAUTHORIZED);
+			return new ResponseEntity<String>("", HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 		
 		RestTemplate restTemplate = new RestTemplate();
@@ -65,35 +64,41 @@ public class VerifySlipController {
 		//sign with itmx signature
 		try {
 			String itmxSignature = SignatureAuthen.sign("itmx", content);
-			headers.set("signature", itmxSignature);
+			headers.set(SignatureAuthen.signatureHeaderName, itmxSignature);
+//			logger.info("itmx signature: "+ itmxSignature);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return new ResponseEntity<String>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 		
-		HttpEntity<String> targetRequest = new HttpEntity<String>(content, headers);
-		
-		ResponseEntity<String> response = restTemplate.exchange(bankUrl, httpMethod, targetRequest,  String.class);
-		
-		//verify response signature
-		signatureStr = response.getHeaders().get(SignatureAuthen.signatureHeaderName).get(0);
-		String responseBody = response.getBody();
 		
 		try {
+			logger.info("calling to "+bankUrl);
+			HttpEntity<String> targetRequest = new HttpEntity<String>(content, headers);
+			
+			ResponseEntity<String> response = restTemplate.exchange(bankUrl, httpMethod, targetRequest,  String.class);
+			
+			//verify response signature
+			signatureStr = response.getHeaders().get(SignatureAuthen.signatureHeaderName).get(0);
+			String responseBody = response.getBody();
+//			
+			logger.info("response: " + responseBody);
 			if(!SignatureAuthen.verify(bankId, signatureStr, responseBody)) {
-//				logger.info(signatureStr);
+//				logger.info("bank signature:" + signatureStr);
 				return new ResponseEntity<String>("", HttpStatus.UNAUTHORIZED);
 			}
+			
+
+			HttpHeaders ResponseHeaders = new HttpHeaders();
+			ResponseHeaders.add(SignatureAuthen.signatureHeaderName, SignatureAuthen.sign("itmx", responseBody));
+			
+			return new ResponseEntity<String>(responseBody, ResponseHeaders, HttpStatus.OK);
+				
 		} catch (Exception e) {
-			return new ResponseEntity<String>("", HttpStatus.INTERNAL_SERVER_ERROR);
+			return new ResponseEntity<String>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 		
-		HttpHeaders ResponseHeaders = new HttpHeaders();
-		ResponseHeaders.add(SignatureAuthen.signatureHeaderName, SignatureAuthen.sign("itmx", responseBody));
-		
-		return new ResponseEntity<String>(response.getBody(), ResponseHeaders, HttpStatus.OK);
-			
 		//GET URL
 //			ResponseEntity<String> response = restTemplate.getForEntity("https://gturnquist-quoters.cfapps.io/api/random", 
 //					 String.class);

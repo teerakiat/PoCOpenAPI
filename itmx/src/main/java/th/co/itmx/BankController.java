@@ -40,13 +40,15 @@ public class BankController {
 			String signatureStr = request.getHeader(SignatureAuthen.signatureHeaderName);
 		
 			if(!SignatureAuthen.verify("itmx", signatureStr, content)) {
-				return new ResponseEntity<String>("", HttpStatus.UNAUTHORIZED);
+				logger.info("reject from bank...");
+				return new ResponseEntity<String>("reject from bank", HttpStatus.UNAUTHORIZED);
 			}
 			
-			//mock response
+			//seralize json to object
 			ObjectMapper mapper = new ObjectMapper();
 			VerifySlipRequest verifySlipRequest = mapper.readValue(content, VerifySlipRequest.class);
 					
+			//mock response
 			VerifySlipResponse response = new VerifySlipResponse();
 			response.setResponseCode("000");
 			response.setSendingBank(verifySlipRequest.getSendingBank());
@@ -70,7 +72,7 @@ public class BankController {
 			String responseSignature = SignatureAuthen.sign("bankA", responseContent);
 			
 			headers.add(SignatureAuthen.signatureHeaderName, responseSignature);
-//			logger.info(responseContent);
+			logger.info(responseContent);
 			
 			return new ResponseEntity<String>(responseContent, headers, HttpStatus.OK);
 		} catch (Exception ex) {
