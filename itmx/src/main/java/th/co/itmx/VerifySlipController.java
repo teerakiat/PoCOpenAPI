@@ -45,7 +45,9 @@ public class VerifySlipController {
 		String pathInfo = "/bank/verifyslip/"+HttpUtil.getWildcardPath(request);
 		
 		HttpMethod httpMethod = HttpMethod.resolve(request.getMethod());
-		String bankUrl = appConfig.getUrls().get(bankId) + pathInfo;
+		
+		
+		String bankUrl = appConfig.getUrl(bankId) + pathInfo;
 		
 		//verify source bank signature
 		String signatureStr = request.getHeader(SignatureAuthen.signatureHeaderName);

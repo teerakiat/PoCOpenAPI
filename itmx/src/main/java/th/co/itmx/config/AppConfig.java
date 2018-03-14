@@ -19,4 +19,11 @@ public class AppConfig {
 	public void setUrls(final Map<String, String> u) {
 		this.urls = new HashMap<String, String>(urls);
 	}
+	
+	public String getUrl(String bankId) {
+		if(this.urls.containsKey(bankId)) {
+			return this.urls.get(bankId);
+		}
+		return this.urls.get("default");
+	}
 }
